@@ -111,7 +111,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(vars.SELF_HOSTED
           && '[{"arch":"","os":"orca-lnx-server"}]'
-          || '[{"arch":"","os":"ubuntu-24.04"},{"arch":"aarch64","os":"ubuntu-24.04-arm"}]') }}
+          || '[{"arch":"","os":"ubuntu-24.04"}]') }}
     # Don't run scheduled builds on forks:
     if: ${{ false && !cancelled() && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
     uses: ./.github/workflows/build_check_cache.yml
