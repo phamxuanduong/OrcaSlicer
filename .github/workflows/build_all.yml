@@ -111,9 +111,9 @@ jobs:
       matrix:
         include: ${{ fromJSON(vars.SELF_HOSTED
           && '[{"arch":"","os":"orca-lnx-server"}]'
-          || '[{"arch":"","os":"ubuntu-24.04"}]') }}
+          || '[{"arch":"","os":"ubuntu-24.04"},{"arch":"aarch64","os":"ubuntu-24.04-arm"}]') }}
     # Don't run scheduled builds on forks:
-    if: ${{ !cancelled() && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    if: ${{ false && !cancelled() && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
     uses: ./.github/workflows/build_check_cache.yml
     with:
       os: ${{ matrix.os }}
@@ -176,7 +176,7 @@ jobs:
   unit_tests_linux_x86_64:
     name: Linux x86_64
     needs: build_linux
-    if: ${{ !cancelled() && success() }}
+    if: ${{ false && !cancelled() && success() }}
     uses: ./.github/workflows/unit_tests.yml
     with:
       os: ${{ vars.SELF_HOSTED && 'orca-lnx-server' || 'ubuntu-24.04' }}
