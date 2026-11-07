@@ -73,6 +73,7 @@
 #include <mutex>
 #include <memory>
 #include <sstream>
+#include <fstream>
 #include <regex>
 #include <set>
 #include <thread>
@@ -190,6 +191,64 @@ bool extract_plate_gcode(const std::string& archive_path, int plate_index, const
     return extracted;
 }
 
+// Snapmaker U1 firmware resets its per-print preferences (bed leveling, dynamic flow calibration,
+// timelapse) before every print and expects the slicer to switch them on again. Its OrcaSlicer start
+// G-code carries SET_PRINT_AUTO_BED_LEVELING / SET_TIME_LAPSE_CAMERA lines, so the send dialog's
+// toggles are written into those lines, plus ORCA_FLOW_CALIBRATE for the flow calibration toggle
+// (a Klipper macro on the printer that forwards to SET_PRINT_PREFERENCES). Only the start of the
+// file (up to PRINT_START) is looked at; a file without these lines is left untouched.
+bool rewrite_print_preferences(const boost::filesystem::path& src, const boost::filesystem::path& dst, const Slic3r::PrintParams& params)
+{
+    static const char* bed_cmd   = "SET_PRINT_AUTO_BED_LEVELING";
+    static const char* lapse_cmd = "SET_TIME_LAPSE_CAMERA";
+    static const char* flow_cmd  = "ORCA_FLOW_CALIBRATE";
+
+    std::ifstream in(src.string(), std::ios::binary);
+    if (!in)
+        return false;
+    std::ofstream out(dst.string(), std::ios::binary);
+    if (!out)
+        return false;
+
+    const std::string bed_line   = std::string(bed_cmd) + " ENABLE=" + (params.task_bed_leveling ? "1" : "0");
+    const std::string lapse_line = std::string(lapse_cmd) + " ENABLE=" + (params.task_record_timelapse ? "1" : "0");
+    const std::string flow_line  = std::string(flow_cmd) + " ENABLE=" + (params.task_flow_cali ? "1" : "0");
+
+    bool        changed = false, flow_written = false, header = true;
+    int         lines = 0;
+    std::string line;
+    while (header && std::getline(in, line)) {
+        ++lines;
+        std::string body = line;
+        if (!body.empty() && body.back() == '\r')
+            body.pop_back();
+        if (boost::starts_with(body, bed_cmd)) {
+            out << bed_line << '\n';
+            changed = true;
+        } else if (boost::starts_with(body, lapse_cmd)) {
+            out << lapse_line << '\n';
+            changed = true;
+            if (!flow_written) {
+                out << flow_line << '\n';
+                flow_written = true;
+            }
+        } else if (boost::starts_with(body, flow_cmd)) {
+            if (!flow_written) {
+                out << flow_line << '\n';
+                flow_written = true;
+            }
+            changed = true;
+        } else {
+            out << line << '\n';
+            if (boost::starts_with(body, "PRINT_START") || lines > 2000)
+                header = false;
+        }
+    }
+    if (in && in.peek() != std::ifstream::traits_type::eof())
+        out << in.rdbuf();
+    return changed && out.good();
+}
+
 // Klipper reads any uploaded file as G-code, so unless the printer prints 3MF, a .gcode.3mf bundle is uploaded as the
 // plate's G-code inside it.
 class UploadFile
@@ -235,6 +294,31 @@ public:
     // ok() is false when a bundle's plate G-code could not be extracted.
     bool               ok() const { return !m_failed; }
     const std::string& path() const { return m_path; }
+
+    // Writes the send dialog's print options into the start G-code of the file being uploaded (see
+    // rewrite_print_preferences); the rewritten copy replaces the upload path and is removed with it.
+    void apply_print_preferences(const Slic3r::PrintParams& params)
+    {
+        if (m_failed || m_sends_bundle)
+            return;
+        boost::system::error_code ec;
+        const boost::filesystem::path temp_dir = boost::filesystem::temp_directory_path(ec);
+        const boost::filesystem::path name     = ec ? boost::filesystem::path() :
+                                                      boost::filesystem::unique_path("orca-upload-%%%%-%%%%-%%%%.gcode", ec);
+        if (ec)
+            return;
+        const boost::filesystem::path dst = temp_dir / name;
+        if (!rewrite_print_preferences(boost::filesystem::path(m_path), dst, params)) {
+            boost::filesystem::remove(dst, ec);
+            return;
+        }
+        if (!m_extracted.empty())
+            boost::filesystem::remove(m_extracted, ec);
+        m_extracted = dst;
+        m_path      = dst.string();
+        BOOST_LOG_TRIVIAL(info) << "MoonrakerPrinterAgent: print preferences written into start G-code (bed_leveling=" << params.task_bed_leveling
+                                << " flow_cali=" << params.task_flow_cali << " timelapse=" << params.task_record_timelapse << ")";
+    }
 
     std::string upload_name(std::string name) const
     {
@@ -462,6 +546,7 @@ int MoonrakerPrinterAgent::start_send_gcode_to_sdcard(PrintParams      params,
     if (!file.ok()) {
         return BAMBU_NETWORK_ERR_FILE_NOT_EXIST;
     }
+    file.apply_print_preferences(params);
 
     // Upload only, don't start print
     if (!upload_gcode(file.path(), file.upload_name(params.project_name), device_info.base_url, device_info.api_key, update_fn, cancel_fn)) {
@@ -500,6 +585,7 @@ int MoonrakerPrinterAgent::start_local_print(PrintParams params, OnUpdateStatusF
     if (!file.ok()) {
         return BAMBU_NETWORK_ERR_FILE_NOT_EXIST;
     }
+    file.apply_print_preferences(params);
 
     const std::string upload_filename = file.upload_name(params.project_name);
 
@@ -2192,6 +2278,8 @@ nlohmann::json MoonrakerPrinterAgent::build_print_payload_locked() const
     // Default to 0 (not supported) if neither object exists
     bool has_bed_leveling                    = (available_objects.count("bed_mesh") != 0 || available_objects.count("probe") != 0);
     payload["print"]["support_bed_leveling"] = has_bed_leveling ? 1 : 0;
+    // Snapmaker U1 firmware (print_task_config) runs its dynamic flow calibration before a print when asked to
+    payload["print"]["support_flow_calibration"] = available_objects.count("print_task_config") != 0;
 
     const nlohmann::json* extruder = nullptr;
     if (status_cache.contains("extruder") && status_cache["extruder"].is_object()) {
