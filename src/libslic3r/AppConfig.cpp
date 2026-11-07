@@ -723,8 +723,9 @@ void AppConfig::set_defaults()
 
     if (get("use_printer_agents").empty())
     {
-        // false = legacy behavior using print hosts
-        set_bool("use_printer_agents", false);
+        // U1 fork: printer agents on by default (Device tab, send dialog with print options);
+        // upstream keeps the legacy print-host flow (false) here.
+        set_bool("use_printer_agents", true);
     }
 
     // Remove legacy window positions/sizes
