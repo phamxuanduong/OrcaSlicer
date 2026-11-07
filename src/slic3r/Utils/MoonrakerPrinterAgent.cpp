@@ -2267,6 +2267,11 @@ nlohmann::json MoonrakerPrinterAgent::build_print_payload_locked() const
         if (homed.find('Z') != std::string::npos)
             home_flag |= 4; // bit 2
     }
+    // parse_home_flag() re-derives is_support_flow_calibration (bit 15) and is_support_pa_calibration
+    // (bit 16) from this field after the support_* keys, so the Snapmaker flow calibration must be
+    // advertised here too or the send dialog hides its toggle again.
+    if (available_objects.count("print_task_config") != 0)
+        home_flag |= (1 << 15) | (1 << 16);
     payload["print"]["home_flag"] = home_flag;
 
     // Moonraker doesn't provide temperature ranges via API - use hardcoded defaults
