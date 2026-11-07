@@ -2285,6 +2285,10 @@ nlohmann::json MoonrakerPrinterAgent::build_print_payload_locked() const
     payload["print"]["support_bed_leveling"] = has_bed_leveling ? 1 : 0;
     // Snapmaker U1 firmware (print_task_config) runs its dynamic flow calibration before a print when asked to
     payload["print"]["support_flow_calibration"] = available_objects.count("print_task_config") != 0;
+    // Timelapse toggle: MachineObject::canEnableTimelapse() needs support_timelapse plus a normal SD card
+    // state (reported above); Klipper exposes a "timelapse" object when moonraker-timelapse / the
+    // Snapmaker timelapse module is loaded.
+    payload["print"]["support_timelapse"] = available_objects.count("timelapse") != 0;
 
     const nlohmann::json* extruder = nullptr;
     if (status_cache.contains("extruder") && status_cache["extruder"].is_object()) {
