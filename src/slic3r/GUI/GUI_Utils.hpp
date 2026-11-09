@@ -14,6 +14,7 @@
 #include <boost/optional.hpp>
 #include <boost/log/trivial.hpp>
 
+#include <algorithm>
 #include <type_traits>
 #include <utility>
 #include <wx/frame.h>
@@ -33,6 +34,7 @@
 #include <chrono>
 #include <wx/version.h>
 #include <wx/toplevel.h>
+#include <wx/display.h>
 #include <wx/string.h>
 #include "Event.hpp"
 #include "libslic3r/Utils.hpp"
@@ -176,6 +178,43 @@ public:
 #endif // __WINDOWS__
 
         });
+
+#ifdef __WXGTK__
+        if (std::is_same<wxDialog, P>::value) {
+            // wxGTK lays a dialog out while it is being mapped, before the window
+            // manager has reported the real frame size, and it may not send another
+            // size event once the final size is known. The sizer then keeps that
+            // first layout, which can squeeze controls to zero height and push the
+            // rest past the bottom edge (seen with the IP / access code dialog).
+            // Lay the dialog out again once it is on screen. Only Layout() is
+            // needed: the final client size was already big enough. The size is
+            // left alone so dialogs that clamp or restore their size keep it.
+            // The same early placement can also put the dialog's top-left corner
+            // at the centre of the parent, so part of it hangs off the screen;
+            // in that case only, move it back inside the display.
+            // A subclass with its own wxEVT_SHOW handler must call Skip() to get this.
+            this->Bind(wxEVT_SHOW, [this](wxShowEvent& e) {
+                e.Skip();
+                if (!e.IsShown())
+                    return;
+                this->CallAfter([this]() {
+                    if (!this->IsShown())
+                        return;
+                    if (this->GetSizer() != nullptr)
+                        this->Layout();
+                    const int    display_idx = wxDisplay::GetFromWindow(this);
+                    const wxRect area = wxDisplay(display_idx == wxNOT_FOUND ? 0u : unsigned(display_idx)).GetClientArea();
+                    const wxRect rect = this->GetScreenRect();
+                    if (!area.IsEmpty() && !area.Contains(rect)) {
+                        const int x = std::max(area.GetLeft(), std::min(rect.GetLeft(), area.GetRight() + 1 - rect.GetWidth()));
+                        const int y = std::max(area.GetTop(), std::min(rect.GetTop(), area.GetBottom() + 1 - rect.GetHeight()));
+                        if (x != rect.GetLeft() || y != rect.GetTop())
+                            this->Move(x, y);
+                    }
+                });
+            });
+        }
+#endif // __WXGTK__
 
         if (std::is_same<wxDialog, P>::value) {
             this->Bind(wxEVT_CHAR_HOOK, [this](wxKeyEvent& e) {
