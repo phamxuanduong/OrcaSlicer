@@ -1235,6 +1235,16 @@ void PlaterPresetComboBox::update()
     /*if (!presets.front().is_visible)
         this->set_label_marker(this->Append(separator(L("System presets")), wxNullBitmap));*/
 
+    // ORCA: a printer model that a user preset derives from is listed only through that user
+    // preset, so a printer saved with its own settings (e.g. a print host) shows up once.
+    // The model's system entry comes back while one of its system presets is selected.
+    std::unordered_set<std::string> printer_models_with_user_preset;
+    if (m_type == Preset::TYPE_PRINTER) {
+        for (const Preset& preset : presets)
+            if (preset.is_visible && preset.is_compatible && preset.is_user() && !preset.inherits().empty())
+                printer_models_with_user_preset.insert(preset.config.opt_string("printer_model"));
+    }
+
     for (size_t i = presets.front().is_visible ? 0 : m_collection->num_default_presets(); i < presets.size(); ++i)
     {
         const Preset& preset = presets[i];
@@ -1307,6 +1317,8 @@ void PlaterPresetComboBox::update()
             //BBS: move system to the end
             if (m_type == Preset::TYPE_PRINTER) {
                 auto printer_model = preset.config.opt_string("printer_model");
+                if (!is_selected && printer_models_with_user_preset.count(printer_model) > 0)
+                    continue;
 
                 // ORCA: Make system printer presets display the dirty "*" prefix when edited.
                 name = from_u8(is_selected && preset.is_dirty ? Preset::suffix_modified() + printer_model : printer_model);
