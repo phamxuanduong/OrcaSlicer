@@ -75,8 +75,8 @@
 		"0.4"
 	],
 	"filament_z_hop_types": [
-		"Slope Lift",
-		"Slope Lift"
+		"nil",
+		"nil"
 	],
 	"nozzle_temperature": [
 		"240",

@@ -15,7 +15,7 @@
 		"1.25"
 	],
 	"filament_z_hop_types": [
-		"Spiral Lift"
+		"nil"
 	],
 	"filament_retraction_speed": [
 		"35"

@@ -87,8 +87,8 @@
 		"1"
 	],
 	"filament_z_hop_types": [
-		"Slope Lift",
-		"Slope Lift"
+		"nil",
+		"nil"
 	],
 	"hot_plate_temp": [
 		"80"

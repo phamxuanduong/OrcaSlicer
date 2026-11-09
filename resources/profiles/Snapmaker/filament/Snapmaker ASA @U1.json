@@ -18,7 +18,7 @@
 	],
 	"filament_z_hop_types": [
 		"nil",
-		"Slope Lift"
+		"nil"
 	],
 	"filament_multitool_ramming": [
 		"0",

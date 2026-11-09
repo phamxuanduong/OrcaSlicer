@@ -128,7 +128,7 @@
 	],
 	"filament_z_hop_types": [
 		"nil",
-		"Auto Lift"
+		"nil"
 	],
 	"fan_min_speed": [
 		"100",

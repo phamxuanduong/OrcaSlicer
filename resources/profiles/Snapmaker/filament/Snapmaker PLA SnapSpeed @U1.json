@@ -243,8 +243,8 @@
 		"0.4"
 	],
 	"filament_z_hop_types": [
-		"Slope Lift",
-		"Slope Lift"
+		"nil",
+		"nil"
 	],
 	"full_fan_speed_layer": [
 		"0"

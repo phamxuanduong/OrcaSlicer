@@ -90,8 +90,8 @@
 		"240"
 	],
 	"filament_z_hop_types": [
-		"Slope Lift",
-		"Slope Lift"
+		"nil",
+		"nil"
 	],
 	"filament_wipe": [
 		"1",

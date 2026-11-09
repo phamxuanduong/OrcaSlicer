@@ -92,8 +92,8 @@
 		"100"
 	],
 	"filament_z_hop_types": [
-		"Slope Lift",
-		"Slope Lift"
+		"nil",
+		"nil"
 	],
 	"activate_air_filtration": [
 		"0",

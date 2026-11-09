@@ -155,14 +155,14 @@
 		"10"
 	],
 	"retract_lift_above": [
-		"0",
-		"0",
-		"0",
-		"0",
-		"0",
-		"0",
-		"0",
-		"0"
+		"0.3",
+		"0.3",
+		"0.3",
+		"0.3",
+		"0.3",
+		"0.3",
+		"0.3",
+		"0.3"
 	],
 	"retract_lift_below": [
 		"269",
@@ -296,14 +296,14 @@
 		"0.4"
 	],
 	"z_hop_types": [
-		"Auto Lift",
-		"Auto Lift",
-		"Auto Lift",
-		"Auto Lift",
-		"Auto Lift",
-		"Auto Lift",
-		"Auto Lift",
-		"Auto Lift"
+		"Normal Lift",
+		"Normal Lift",
+		"Normal Lift",
+		"Normal Lift",
+		"Normal Lift",
+		"Normal Lift",
+		"Normal Lift",
+		"Normal Lift"
 	],
 	"enable_filament_ramming": "0",
 	"extruder_clearance_height_to_rod": "27.5",

@@ -118,8 +118,8 @@
 		"80"
 	],
 	"filament_z_hop_types": [
-		"Slope Lift",
-		"Slope Lift"
+		"nil",
+		"nil"
 	],
 	"pressure_advance": [
 		"0.03",
